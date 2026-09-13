@@ -507,7 +507,7 @@
   const LANGUAGES = [
     ["en","English"], ["my","Burmese (မြန်မာ)"], ["th","Thai"], ["zh-CN","Chinese (Simplified)"],
     ["zh-TW","Chinese (Traditional)"], ["ja","Japanese"], ["ko","Korean"], ["vi","Vietnamese"],
-    ["id","Indonesian"], ["ms","Malay"], ["fil","Filipino"], ["hi","Hindi"], ["bn","Bengali"],
+    ["id","Indonesian"], ["ms","Malay"], ["tl","Filipino"], ["hi","Hindi"], ["bn","Bengali"],
     ["ur","Urdu"], ["ta","Tamil"], ["te","Telugu"], ["ne","Nepali"], ["si","Sinhala"],
     ["km","Khmer"], ["lo","Lao"], ["es","Spanish"], ["fr","French"], ["de","German"],
     ["it","Italian"], ["pt","Portuguese"], ["pt-BR","Portuguese (Brazil)"], ["nl","Dutch"],
@@ -601,12 +601,28 @@
     statusEl.textContent = 'Translating…';
 
     try{
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}&de=parabaik.translator@gmail.com`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('bad response');
       const data = await res.json();
+
+      if (data && data.responseStatus && Number(data.responseStatus) !== 200){
+        throw new Error(data.responseDetails || 'bad status');
+      }
+
       const translated = data && data.responseData && data.responseData.translatedText;
       if (!translated) throw new Error('no translation');
+
+      if (/MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID LANGUAGE|AMBIGUOUS LANGUAGE|PLEASE SELECT TWO DISTINCT|NO QUERY SPECIFIED/i.test(translated)){
+        if (/WARNING|LIMIT/i.test(translated)){
+          statusEl.textContent = 'Daily free-translation limit reached for this connection. Try again later.';
+        } else {
+          statusEl.textContent = 'That language pair isn\u2019t supported. Try a different language.';
+        }
+        statusEl.classList.add('err');
+        return;
+      }
+
       tgtText.value = translated;
       tgtText.classList.remove('text-pop');
       void tgtText.offsetWidth;
